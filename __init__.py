@@ -8,7 +8,20 @@ from .src.main import message_processor, KEYWORDS
 from .src.utils import get_object_values, create_match_func_factory
 
 __version__ = "2.2.2"
-__doc__ = "牛子系统 v{}".format(__version__)
+__doc__ = f"""牛子系统 v{__version__}
+可用的指令/功能有：
+""" + "、".join(
+    [
+        "/".join(KEYWORDS.get("chinchin")),
+        "/".join([i + "@某人" for i in KEYWORDS.get("pk")]),
+        "/".join(KEYWORDS.get("lock_me")),
+        "/".join([i + "@某人" for i in KEYWORDS.get("lock")]),
+        "/".join(KEYWORDS.get("glue")),
+        "/".join([i + "@某人" for i in KEYWORDS.get("see_chinchin")]),
+        "/".join(KEYWORDS.get("sign_up")),
+        "/".join(KEYWORDS.get("ranking")),
+    ]
+)
 config = jconfig.get_configuration("chinchin_system")
 groups = config.get("groups")
 

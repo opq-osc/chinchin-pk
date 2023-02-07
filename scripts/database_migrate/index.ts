@@ -117,6 +117,36 @@ const run = async () => {
       .toSQL()
     sql.push(deleteSqlWithUserInfo.sql)
 
+    sql.push('-- Rebirth Table --')
+    const createSqlWithRebirth = await ins.schema
+      .createTableIfNotExists('rebirth', (table) => {
+        table.bigint('qq').primary()
+        table.string('latest_rebirth_time')
+        table.integer('level')
+      })
+      .toSQL()
+    // @ts-expect-error
+    sql.push(createSqlWithRebirth[0].sql)
+    const insertSqlWithRebirth = await ins('rebirth')
+      .insert({
+        qq: 123456789,
+        latest_rebirth_time: '2023-01-25 02:26:52',
+        level: 1,
+      })
+      .toSQL()
+    sql.push(insertSqlWithRebirth.sql)
+    const selectSqlWithRebirth = await ins('rebirth')
+      .select('*')
+      .where('qq', 123456789)
+      .toSQL()
+    sql.push(selectSqlWithRebirth.sql)
+    // delete
+    const deleteSqlWithRebirth = await ins('rebirth')
+      .where('qq', 123456789)
+      .del()
+      .toSQL()
+    sql.push(deleteSqlWithRebirth.sql)
+
     // write
     fs.writeFileSync(SQL_FILE, sql.join(';\n') + ';\n', 'utf-8')
   } catch (e) {

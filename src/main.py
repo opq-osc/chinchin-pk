@@ -3,6 +3,7 @@ from .impl import get_at_segment, send_message
 from .utils import create_match_func_factory, join, get_now_time, fixed_two_decimal_digits, date_improve
 from .config import Config
 from .cd import CD_Check
+from .rebirth import RebirthSystem
 from typing import Optional
 
 KEYWORDS = {
@@ -14,6 +15,7 @@ KEYWORDS = {
     'see_chinchin': ['看他牛子', '看看牛子'],
     'sign_up': ['注册牛子'],
     'ranking': ['牛子排名', '牛子排行'],
+    'rebirth': ['牛子转生'],
 }
 
 DEFAULT_NONE_TIME = '2000-01-01 00:00:00'
@@ -34,6 +36,9 @@ def message_processor(
         TODO: 破解牛子：被破解的 牛子 长度操作 x 100 倍
         TODO: 不同群不同的配置参数
         TODO: 成就系统
+
+        TODO: 扣减 0 以 pure_length 为限制
+        TODO: 有 level 的加权操作
     """
     # lazy init database
     lazy_init_database()
@@ -73,7 +78,12 @@ def message_processor(
     if match_func(KEYWORDS.get('ranking'), message):
         return Chinchin_info.entry_ranking(qq, group)
 
+    # 牛子转生
+    if match_func(KEYWORDS.get('rebirth'), message):
+        return Chinchin_upgrade.entry_rebirth(qq, group)
+
     # 查询牛子信息
+    # FIXME: 注意因为是模糊匹配，所以 “牛子” 的命令要放到所有 "牛子xxx" 命令的最后
     if match_func(KEYWORDS.get('chinchin'), message):
         return Chinchin_info.entry_chinchin(qq, group)
 
@@ -112,13 +122,44 @@ def message_processor(
             return Chinchin_me.entry_glue(qq, group)
 
 
+class Chinchin_view():
+
+    @staticmethod
+    def length_label(length: float,
+                     level: int = None,
+                     need_level_label: bool = True,
+                     data_only: bool = False,
+                     unit: str = 'cm'):
+        if level is None:
+            length_value = fixed_two_decimal_digits(length)
+            if data_only:
+                return {
+                    'length': length_value,
+                }
+            return f'{length_value}{unit}'
+        else:
+            level_view = RebirthSystem.get_rebirth_view_by_level(
+                level=level, length=length)
+            pure_length = level_view['pure_length']
+            if data_only:
+                return {
+                    'length': fixed_two_decimal_digits(pure_length),
+                    'current_level_info': level_view['current_level_info'],
+                }
+            level_label = ''
+            if need_level_label:
+                label = level_view['current_level_info']['name']
+                level_label = f' ({label})'
+            return f'{fixed_two_decimal_digits(pure_length)}{unit}{level_label}'
+
+
 class Chinchin_info():
 
     @staticmethod
     def entry_ranking(qq: int, group: int):
         top_users = DB.get_top_users()
         message_arr = [
-            '【牛子国最长大牛子】',
+            '【牛子宇宙最长大牛子】',
         ]
         for user in top_users:
             idx = top_users.index(user) + 1
@@ -134,8 +175,10 @@ class Chinchin_info():
             nickname = user['latest_speech_nickname']
             if len(nickname) == 0:
                 nickname = '无名英雄'
+            length_label = Chinchin_view.length_label(
+                length=user.get('length'), level=user.get('level'), need_level_label=True)
             message_arr.append(
-                f'{idx}. {prefix}{nickname} 长度：{fixed_two_decimal_digits(user["length"])}cm')
+                f'{idx}. {prefix}{nickname} 长度：{length_label}')
         send_message(qq, group, join(message_arr, '\n'))
 
     @staticmethod
@@ -161,12 +204,14 @@ class ChinchinInternal():
             get_at_segment(qq),
             '【牛子信息】',
         ]
+        length_label = Chinchin_view.length_label(
+            length=user_data.get('length'),
+            level=user_data.get('level'),
+            need_level_label=True,
+            unit='厘米')
         # length
         message_arr.append(
-            '长度: {}厘米'.format(fixed_two_decimal_digits(
-                user_data.get('length'),
-                to_number=False
-            ))
+            f'长度: {length_label}'
         )
         # locked
         if user_data.get('locked_time') != DEFAULT_NONE_TIME:
@@ -518,3 +563,49 @@ class Chinchin_with_target():
                 '你的打胶让对方牛子感到很舒服，对方牛子增加{}厘米'.format(target_plus_value)
             ]
             send_message(qq, group, join(message_arr, '\n'))
+
+
+class Chinchin_upgrade():
+
+    @staticmethod
+    def entry_rebirth(qq: int, group: int):
+        # TODO: 满转人士提示，不能再转了
+        info = RebirthSystem.get_rebirth_info(qq)
+        if info['can_rebirth'] is False:
+            message_arr = [
+                get_at_segment(qq),
+                '你和牛子四目相对，牛子摇了摇头，说下次一定！'
+            ]
+            send_message(qq, group, join(message_arr, '\n'))
+            return
+        # rebirth
+        is_rebirth_fail = info['failed_info']['is_failed']
+        if is_rebirth_fail:
+            # punish
+            punish_length = info['failed_info']['failed_punish_length']
+            DB.length_decrease(qq, punish_length)
+            message_arr = [
+                get_at_segment(qq),
+                '细数牛界之中，贸然渡劫者九牛一生，牛子失去荔枝爆炸了，减小{}厘米'.format(
+                    punish_length)
+            ]
+            send_message(qq, group, join(message_arr, '\n'))
+            return
+        # success
+        is_first_rebirth = info['current_level_info'] is None
+        rebirth_data = {
+            'qq': qq,
+            'level': info['next_level_info']['level'],
+            'latest_rebirth_time': get_now_time()
+        }
+        if is_first_rebirth:
+            DB.sub_db_rebirth.insert_rebirth_data(rebirth_data)
+        else:
+            DB.sub_db_rebirth.update_rebirth_data(rebirth_data)
+        message_arr = [
+            get_at_segment(qq),
+            '你为了强度已经走了太远，却忘记当初为什么而出发，电光石火间飞升为【{}】！'.format(
+                info['next_level_info']['name'])
+        ]
+        send_message(qq, group, join(message_arr, '\n'))
+        return

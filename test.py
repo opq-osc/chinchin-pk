@@ -60,7 +60,10 @@ log_arg = ''
 def write_snapshot():
     global snapshot, log_arg
     timestamp = int(time.time())
-    with open(f'./__snapshot__/snapshot-{timestamp}{log_arg}.txt', 'w') as f:
+    dir = f'./__snapshot__/{log_arg}'
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    with open(f'{dir}/snapshot-{timestamp}.txt', 'w') as f:
         f.write('\n'.join(snapshot))
 
 
@@ -209,6 +212,40 @@ def test_nickname():
     wrap(user_1, '牛子排名', comment='user 1 改名再查排名')
 
 
+def test_rebirth():
+    wrap(user_1, '注册牛子', comment='1 注册')
+    wrap(user_2, '注册牛子', comment='2 注册')
+
+    wrap(user_1, '牛子转生', comment='user 1 不能转生')
+
+    data = DB.load_data(user_1)
+    data['length'] = 199
+    DB.write_data(data)
+    wrap(user_1, '牛子转生', comment='user 1 不能转生 +1')
+
+    data = DB.load_data(user_1)
+    data['length'] = 200
+    DB.write_data(data)
+    wrap(user_1, '牛子转生', comment='user 1 一转')
+
+    wrap(user_1, '牛子', comment='user 1 查个人信息')
+
+    wrap(user_1, '牛子转生', comment='user 1 不能转生')
+
+    data = DB.load_data(user_1)
+    data['length'] = 1000
+    DB.write_data(data)
+    wrap(user_1, '牛子转生', comment='user 1 积攒太多再二转')
+    wrap(user_1, '牛子', comment='user 1 查个人信息')
+    wrap(user_1, '牛子转生', comment='user 1 三转')
+    wrap(user_1, '牛子', comment='user 1 查个人信息')
+
+    wrap(user_1, '牛子转生', comment='user 1 不能再转 +1')
+    wrap(user_1, '牛子转生', comment='user 1 不能再转 +2')
+    wrap(user_1, '牛子转生', comment='user 1 不能再转 +3')
+    wrap(user_1, '牛子排行', comment='user 1 查排行')
+
+
 if __name__ == '__main__':
     clear_database()
 
@@ -219,5 +256,9 @@ if __name__ == '__main__':
     # args: --nickname
     if arg('--nickname'):
         test_nickname()
+
+    # args: --rebirth
+    if arg('--rebirth'):
+        test_rebirth()
 
     write_snapshot()

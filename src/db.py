@@ -87,9 +87,90 @@ class Sql_UserInfo():
         sql_ins.conn.commit()
 
 
+class Sql_rebirth():
+    @staticmethod
+    def _sql_create_table():
+        return 'create table if not exists `rebirth` (`qq` bigint, `latest_rebirth_time` varchar(255), `level` integer, primary key (`qq`));'
+
+    @staticmethod
+    def _sql_insert_single_data(data: dict):
+        return f'insert into `rebirth` (`level`, `latest_rebirth_time`, `qq`) values (:level, :latest_rebirth_time, {data["qq"]});'
+
+    @staticmethod
+    def _sql_select_single_data(qq: int):
+        return f'select * from `rebirth` where `qq` = {qq};'
+
+    @staticmethod
+    def _sql_batch_select_data(qqs: list):
+        return f'select * from `rebirth` where `qq` in {tuple(qqs)};'
+
+    @staticmethod
+    def _sql_check_table_exists():
+        return 'select count(*) from sqlite_master where type = "table" and name = "rebirth";'
+
+    @staticmethod
+    def _sql_update_single_data(data: dict):
+        return f'update `rebirth` set `level` = :level, `latest_rebirth_time` = :latest_rebirth_time where `qq` = {data["qq"]};'
+
+    @staticmethod
+    def _sql_delete_single_data(qq: int):
+        return f'delete from `rebirth` where `qq` = {qq};'
+
+    @staticmethod
+    def deserialize(data: tuple):
+        return {
+            'qq': data[0],
+            'latest_rebirth_time': data[1],
+            'level': data[2],
+        }
+
+    @classmethod
+    def select_single_data(cls, qq: int):
+        sql_ins.cursor.execute(cls._sql_select_single_data(qq))
+        one = sql_ins.cursor.fetchone()
+        if one is None:
+            return None
+        return cls.deserialize(one)
+
+    @classmethod
+    def insert_single_data(cls, data: dict):
+        sql_ins.cursor.execute(cls._sql_insert_single_data(data), data)
+        sql_ins.conn.commit()
+
+    @classmethod
+    def update_single_data(cls, data: dict):
+        sql_ins.cursor.execute(cls._sql_update_single_data(data), data)
+        sql_ins.conn.commit()
+
+    @classmethod
+    def delete_single_data(cls, qq: int):
+        sql_ins.cursor.execute(cls._sql_delete_single_data(qq))
+        sql_ins.conn.commit()
+
+    @classmethod
+    def select_batch_data_by_qqs(cls, qqs: list):
+        sql_ins.cursor.execute(cls._sql_batch_select_data(qqs))
+        return [cls.deserialize(data) for data in sql_ins.cursor.fetchall()]
+
+
+class DB_Rebirth():
+    @staticmethod
+    def get_rebirth_data(qq: int):
+        return Sql_rebirth.select_single_data(qq)
+
+    @staticmethod
+    def insert_rebirth_data(data: dict):
+        Sql_rebirth.insert_single_data(data)
+
+    @staticmethod
+    def update_rebirth_data(data: dict):
+        Sql_rebirth.update_single_data(data)
+
+
 class Sql():
 
     sub_table_info = Sql_UserInfo()
+    sub_table_rebirth = Sql_rebirth()
 
     def __init__(self):
         self.sqlite_path = Paths.sqlite_path()
@@ -173,20 +254,21 @@ class Sql():
 
     @classmethod
     def check_table_exists(cls):
-        # users table exists
-        sql_ins.cursor.execute(cls.__sql_check_table_exists())
-        one = sql_ins.cursor.fetchone()
-        is_table_exists = one[0] == 1
-        if not is_table_exists:
-            sql_ins.cursor.execute(sql_ins.__sql_create_table())
-            sql_ins.conn.commit()
-        # info table exists
-        sql_ins.cursor.execute(cls.sub_table_info._sql_check_table_exists())
-        one = sql_ins.cursor.fetchone()
-        is_table_exists = one[0] == 1
-        if not is_table_exists:
-            sql_ins.cursor.execute(cls.sub_table_info._sql_create_table())
-            sql_ins.conn.commit()
+        create_table_funs = [
+            [cls.__sql_check_table_exists, cls.__sql_create_table],
+            [cls.sub_table_info._sql_check_table_exists,
+                cls.sub_table_info._sql_create_table],
+            [cls.sub_table_rebirth._sql_check_table_exists,
+                cls.sub_table_rebirth._sql_create_table]
+        ]
+        # check users, info, rebirth table exists
+        for funs in create_table_funs:
+            sql_ins.cursor.execute(funs[0]())
+            one = sql_ins.cursor.fetchone()
+            is_table_exists = one[0] == 1
+            if not is_table_exists:
+                sql_ins.cursor.execute(funs[1]())
+                sql_ins.conn.commit()
 
     @classmethod
     def update_data_by_qq(cls, data: dict):
@@ -240,7 +322,16 @@ class DataUtils():
         return {one['qq']: one for one in data}
 
     @classmethod
-    def merge_data(cls, datas: list):
+    def merge_data(cls, data_1: dict, data_2: dict):
+        # handle None
+        if data_1 is None:
+            data_1 = {}
+        if data_2 is None:
+            data_2 = {}
+        return cls.__assign(data_1, data_2)
+
+    @classmethod
+    def merge_data_list(cls, datas: list):
         maps = [cls.__make_qq_to_data_map(one) for one in datas]
         for key in maps[0].keys():
             for i in range(1, len(maps)):
@@ -255,6 +346,7 @@ class DataUtils():
 class DB():
 
     sub_db_info = DB_UserInfo()
+    sub_db_rebirth = DB_Rebirth()
     utils = DataUtils()
 
     @staticmethod
@@ -263,7 +355,14 @@ class DB():
 
     @staticmethod
     def load_data(qq: int):
-        return Sql.select_data_by_qq(qq)
+        # main data
+        user_table_data = Sql.select_data_by_qq(qq)
+        if user_table_data is None:
+            return None
+        # sub data
+        rebirth_table_data = Sql.sub_table_rebirth.select_single_data(qq)
+        merged_data = DB.utils.merge_data(user_table_data, rebirth_table_data)
+        return merged_data
 
     @classmethod
     def is_registered(cls, qq: int):
@@ -383,7 +482,8 @@ class DB():
         top_users = Sql.get_top_users()
         qqs = [one["qq"] for one in top_users]
         info_list = Sql.sub_table_info.select_batch_data_by_qqs(qqs)
-        merged = DB.utils.merge_data([top_users, info_list])
+        rebirth_list = Sql.sub_table_rebirth.select_batch_data_by_qqs(qqs)
+        merged = DB.utils.merge_data_list([top_users, info_list, rebirth_list])
         return merged
 
 

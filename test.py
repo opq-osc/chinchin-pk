@@ -3,6 +3,7 @@ import time
 from src.db import DB, Sql
 from src.main import message_processor, KEYWORDS
 from src.utils import get_object_values, get_now_time
+import sys
 
 user_1 = 123456789
 user_2 = 987654321
@@ -53,19 +54,30 @@ def wrap(user: int, message: str, at_qq: int = None, comment: str = None):
     )
 
 
+log_arg = ''
+
+
 def write_snapshot():
-    global snapshot
+    global snapshot, log_arg
     timestamp = int(time.time())
-    with open(f'snapshot-{timestamp}.txt', 'w') as f:
+    with open(f'./__snapshot__/snapshot-{timestamp}{log_arg}.txt', 'w') as f:
         f.write('\n'.join(snapshot))
 
 
-is_first_game = True
-if is_first_game:
+def clear_database():
     base_db_path = os.path.join(os.path.dirname(__file__), 'src', 'data-v2')
     if os.path.exists(base_db_path):
         print('remove old data')
         os.system(f'rm -rf {base_db_path}')
+
+
+def arg(str: str):
+    match = len(sys.argv) > 1 and sys.argv[1] == str
+    if match:
+        print(f'arg: {str}')
+        global log_arg
+        log_arg = f'{str}'
+    return match
 
 
 def test_legacy():
@@ -179,7 +191,6 @@ def test_legacy():
     wrap(user_2, 'pk', user_1, comment='user 2 pk user 1 触发 pk 保护')
     wrap(user_2, 'pk', user_1, comment='user 2 pk user 1 触发 pk 保护 +2')
 
-    write_snapshot()
 
 def test_nickname():
     wrap(user_1, '注册牛子', comment='1 注册')
@@ -197,5 +208,16 @@ def test_nickname():
     user_1_nickname = '用户1新名字'
     wrap(user_1, '牛子排名', comment='user 1 改名再查排名')
 
-# test_legacy()
-# test_nickname()
+
+if __name__ == '__main__':
+    clear_database()
+
+    # args: --legacy
+    if arg('--legacy'):
+        test_legacy()
+
+    # args: --nickname
+    if arg('--nickname'):
+        test_nickname()
+
+    write_snapshot()

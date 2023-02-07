@@ -65,3 +65,17 @@ class RebirthSystem():
                 'next_level_info': next_level_info,
                 'failed_info': failed_info,
             }
+
+    @classmethod
+    def get_weight_by_qq(cls, qq: int):
+        user = DB.load_data(qq)
+        level = user.get('level')
+        if level is None:
+            return 1
+        configs = cls.view.get_rebirth_config()
+        current_level_info = None
+        for config in configs:
+            if config['level'] == level:
+                current_level_info = config
+                break
+        return current_level_info['weight']

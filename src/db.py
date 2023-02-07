@@ -379,6 +379,9 @@ class DB():
 
     @classmethod
     def length_increase(cls, qq: int, length: float):
+        """
+          only allow `main.py` call
+        """
         user_data = cls.load_data(qq)
         user_data['length'] += length
         # ensure fixed 2
@@ -388,6 +391,9 @@ class DB():
 
     @classmethod
     def length_decrease(cls, qq: int, length: float):
+        """
+          only allow `main.py` call
+        """
         user_data = cls.load_data(qq)
         will_punish_length = 0
         pure_length = user_data['length']

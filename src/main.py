@@ -37,8 +37,6 @@ def message_processor(
         TODO: 不同群不同的配置参数
         TODO: 成就系统
         TODO: 转生级别不同不能较量
-
-        TODO: 有 level 的加权操作
     """
     # lazy init database
     lazy_init_database()
@@ -120,6 +118,17 @@ def message_processor(
         # 自己打胶
         if match_func(KEYWORDS.get('glue'), message):
             return Chinchin_me.entry_glue(qq, group)
+
+
+class Chinchin_intercepor():
+    @staticmethod
+    def length_operate(qq: int, origin_change: float):
+        rebirth_weight = RebirthSystem.get_weight_by_qq(qq)
+        result = fixed_two_decimal_digits(
+            origin_change * rebirth_weight,
+            to_number=True
+        )
+        return result
 
 
 class Chinchin_view():
@@ -297,6 +306,7 @@ class Chinchin_me():
             is_need_punish = Config.is_hit('lock_me_negative_prob')
             if is_need_punish:
                 punish_value = Config.get_lock_me_punish_value()
+                # not need weighting
                 DB.length_decrease(qq, punish_value)
                 message_arr = [
                     get_at_segment(qq),
@@ -315,6 +325,7 @@ class Chinchin_me():
                 'lock_me_negative_prob_with_strong_person')
             if is_lock_failed:
                 punish_value = Config.get_lock_punish_with_strong_person_value()
+                # not need weighting
                 DB.length_decrease(qq, punish_value)
                 message_arr = [
                     get_at_segment(qq),
@@ -322,7 +333,10 @@ class Chinchin_me():
                 ]
                 send_message(qq, group, join(message_arr, '\n'))
             else:
-                plus_value = Config.get_lock_plus_value()
+                plus_value = Chinchin_intercepor.length_operate(
+                    qq, Config.get_lock_plus_value()
+                )
+                # weighting from qq
                 DB.length_increase(qq, plus_value)
                 # TODO: 🔒自己效果有加成
                 message_arr = [
@@ -356,6 +370,7 @@ class Chinchin_me():
         is_glue_failed = Config.is_hit('glue_self_negative_prob')
         if is_glue_failed:
             punish_value = Config.get_glue_self_punish_value()
+            # not need weighting
             DB.length_decrease(qq, punish_value)
             message_arr = [
                 get_at_segment(qq),
@@ -363,7 +378,10 @@ class Chinchin_me():
             ]
             send_message(qq, group, join(message_arr, '\n'))
         else:
-            plus_value = Config.get_glue_plus_value()
+            plus_value = Chinchin_intercepor.length_operate(
+                qq, Config.get_glue_plus_value()
+            )
+            # weighting from qq
             DB.length_increase(qq, plus_value)
             message_arr = [
                 get_at_segment(qq),
@@ -463,9 +481,15 @@ class Chinchin_with_target():
         DB.record_time(at_qq, 'pked_time')
         DB.count_pk_daily(qq)
         if is_user_win:
-            user_plus_value = Config.get_pk_plus_value()
-            target_punish_value = Config.get_pk_punish_value()
+            user_plus_value = Chinchin_intercepor.length_operate(
+                qq, Config.get_pk_plus_value()
+            )
+            target_punish_value = Chinchin_intercepor.length_operate(
+                qq, Config.get_pk_punish_value()
+            )
+            # weighting from qq
             DB.length_increase(qq, user_plus_value)
+            # weighting from qq
             DB.length_decrease(at_qq, target_punish_value)
             message_arr = [
                 get_at_segment(qq),
@@ -476,6 +500,7 @@ class Chinchin_with_target():
         else:
             user_punish_value = Config.get_pk_punish_value()
             target_plus_value = Config.get_pk_plus_value()
+            # not need weighting
             DB.length_decrease(qq, user_punish_value)
             DB.length_increase(at_qq, target_plus_value)
             message_arr = [
@@ -510,7 +535,10 @@ class Chinchin_with_target():
             ]
             send_message(qq, group, join(message_arr, '\n'))
             return
-        target_plus_value = Config.get_lock_plus_value()
+        target_plus_value = Chinchin_intercepor.length_operate(
+            qq, Config.get_lock_plus_value()
+        )
+        # weighting from qq
         DB.length_increase(at_qq, target_plus_value)
         DB.record_time(at_qq, 'locked_time')
         DB.count_lock_daily(qq)
@@ -548,7 +576,10 @@ class Chinchin_with_target():
         DB.count_glue_daily(qq)
         is_glue_failed = Config.is_hit('glue_negative_prob')
         if is_glue_failed:
-            target_punish_value = Config.get_glue_punish_value()
+            target_punish_value = Chinchin_intercepor.length_operate(
+                qq, Config.get_glue_punish_value()
+            )
+            # weighting from qq
             DB.length_decrease(at_qq, target_punish_value)
             message_arr = [
                 get_at_segment(qq),
@@ -556,7 +587,10 @@ class Chinchin_with_target():
             ]
             send_message(qq, group, join(message_arr, '\n'))
         else:
-            target_plus_value = Config.get_glue_plus_value()
+            target_plus_value = Chinchin_intercepor.length_operate(
+                qq, Config.get_glue_plus_value()
+            )
+            # weighting from qq
             DB.length_increase(at_qq, target_plus_value)
             message_arr = [
                 get_at_segment(qq),

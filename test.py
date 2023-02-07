@@ -252,7 +252,13 @@ def test_rebirth():
     wrap(user_2, '牛子转生', comment='user 2 一转')
     wrap(user_2, '牛子', comment='user 2 查信息')
     wrap(user_1, 'pk', at_qq=user_2, comment='user 1 PK user 2，不能打掉转')
+    Config.modify_config_in_runtime('pk_negative_min', 1)
+    wrap(user_1, 'pk', at_qq=user_2, comment='user 1 PK user 2，预期 3 转加权伤害')
     wrap(user_2, '牛子', comment='user 2 查信息')
+    wrap(user_2, '🔒我', comment='user 2 净长度 0 但可以🔒自己')
+
+    Config.modify_config_in_runtime('glue_plus_min', 1.5)
+    wrap(user_1, '打胶', comment='user 1 打胶，预期 3 转加权')
 
     wrap(user_3, '注册牛子', comment='3 注册')
     data = DB.load_data(user_3)

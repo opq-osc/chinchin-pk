@@ -3,6 +3,7 @@ import time
 from src.db import DB, Sql
 from src.main import message_processor, KEYWORDS
 from src.utils import get_object_values, get_now_time
+from src.config import Config
 import sys
 
 user_1 = 123456789
@@ -244,6 +245,22 @@ def test_rebirth():
     wrap(user_1, '牛子转生', comment='user 1 不能再转 +2')
     wrap(user_1, '牛子转生', comment='user 1 不能再转 +3')
     wrap(user_1, '牛子排行', comment='user 1 查排行')
+
+    data = DB.load_data(user_2)
+    data['length'] = 200
+    DB.write_data(data)
+    wrap(user_2, '牛子转生', comment='user 2 一转')
+    wrap(user_2, '牛子', comment='user 2 查信息')
+    wrap(user_1, 'pk', at_qq=user_2, comment='user 1 PK user 2，不能打掉转')
+    wrap(user_2, '牛子', comment='user 2 查信息')
+
+    wrap(user_3, '注册牛子', comment='3 注册')
+    data = DB.load_data(user_3)
+    data['length'] = 0
+    DB.write_data(data)
+    Config.modify_config_in_runtime('glue_self_negative_prob', 1)
+    wrap(user_3, '打胶', comment='user 3 打胶')
+    wrap(user_3, '牛子', comment='user 3 查信息')
 
 
 if __name__ == '__main__':

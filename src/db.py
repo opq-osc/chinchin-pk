@@ -1,6 +1,7 @@
 import os
 from .utils import get_now_time, is_date_outed, fixed_two_decimal_digits
 from .config import Config
+from .rebirth_view import RebirthSystem_View
 import sqlite3
 
 sql_ins = None
@@ -388,13 +389,24 @@ class DB():
     @classmethod
     def length_decrease(cls, qq: int, length: float):
         user_data = cls.load_data(qq)
-        user_data['length'] -= length
-        # ensure fixed 2
-        user_data['length'] = fixed_two_decimal_digits(
-            user_data['length'], to_number=True)
+        will_punish_length = 0
+        pure_length = user_data['length']
+        # 不能把转生者打降转
+        level = user_data.get('level')
+        if level is not None:
+            length_view = RebirthSystem_View.get_rebirth_view_by_level(
+                level=level,
+                length=pure_length
+            )
+            pure_length = length_view['pure_length']
         # TODO: 禁止负值，更好的提示
-        if user_data['length'] < 0:
-            user_data['length'] = 0
+        if (pure_length - length) < 0:
+            will_punish_length = pure_length
+        else:
+            will_punish_length = length
+        will_punish_length = fixed_two_decimal_digits(
+            will_punish_length, to_number=True)
+        user_data['length'] -= will_punish_length
         cls.write_data(user_data)
 
     @classmethod
@@ -471,6 +483,9 @@ class DB():
 
     @classmethod
     def is_pk_protected(cls, qq: int):
+        """
+          TODO: 对转生者可以刷分，以后需要限制
+        """
         user_data = cls.load_data(qq)
         min_length = Config.get_config('pk_guard_chinchin_length')
         if user_data['length'] <= min_length:

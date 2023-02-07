@@ -23,6 +23,14 @@ class Config():
             cache = json.load(f)
             return cache
 
+    @staticmethod
+    def modify_config_in_runtime(key: str, value):
+        """
+          for test only
+        """
+        global cache
+        cache[key] = value
+
     @classmethod
     def get_config(cls, key: str):
         config = cls.read_config()

@@ -36,8 +36,8 @@ def message_processor(
         TODO: 破解牛子：被破解的 牛子 长度操作 x 100 倍
         TODO: 不同群不同的配置参数
         TODO: 成就系统
+        TODO: 转生级别不同不能较量
 
-        TODO: 扣减 0 以 pure_length 为限制
         TODO: 有 level 的加权操作
     """
     # lazy init database
@@ -138,7 +138,7 @@ class Chinchin_view():
                 }
             return f'{length_value}{unit}'
         else:
-            level_view = RebirthSystem.get_rebirth_view_by_level(
+            level_view = RebirthSystem.view.get_rebirth_view_by_level(
                 level=level, length=length)
             pure_length = level_view['pure_length']
             if data_only:

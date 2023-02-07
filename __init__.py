@@ -7,7 +7,7 @@ from botoy.parser import group as gp
 from .src.main import message_processor, KEYWORDS
 from .src.utils import get_object_values, create_match_func_factory
 
-__version__ = "2.2.2"
+__version__ = "2.3.0"
 __doc__ = f"""牛子系统 v{__version__}
 可用的指令/功能有：
 """ + "、".join(
@@ -20,6 +20,7 @@ __doc__ = f"""牛子系统 v{__version__}
         "/".join([i + "@某人" for i in KEYWORDS.get("see_chinchin")]),
         "/".join(KEYWORDS.get("sign_up")),
         "/".join(KEYWORDS.get("ranking")),
+        "/".join(KEYWORDS.get("rebirth")),
     ]
 )
 config = jconfig.get_configuration("chinchin_system")

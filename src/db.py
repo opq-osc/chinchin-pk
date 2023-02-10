@@ -226,7 +226,7 @@ class Sql_badge():
         sql_ins.cursor.execute(cls._sql_select_single_data(qq))
         one = sql_ins.cursor.fetchone()
         if one is None:
-            return None
+            return {}
         return cls.deserialize(one)
 
     @classmethod
@@ -255,7 +255,7 @@ class DB_Badge():
     @staticmethod
     def init_user_data(qq: int):
         data = Sql_badge.select_single_data(qq)
-        if data is None:
+        if not data:
             data = {
                 "qq": qq,
                 "badge_ids": "",
@@ -281,7 +281,7 @@ class DB_Badge():
     @classmethod
     def plus_value_by_ley(cls, qq: int, key: str, plus_value: int):
         data = Sql_badge.select_single_data(qq)
-        if data is None:
+        if not data:
             cls.init_user_data(qq)
             cls.plus_value_by_ley(qq, key, plus_value)
         else:
@@ -408,11 +408,11 @@ class Sql():
         return f'select * from `users` order by `length` desc limit {max};'
 
     @classmethod
-    def get_top_users(cls) -> list:
+    def get_top_users(cls):
         sql_ins.cursor.execute(cls.__sql_order_by_length())
         some = sql_ins.cursor.fetchall()
         if not some:
-            return None
+            return []
         return [cls.deserialize(one) for one in some]
 
     @classmethod

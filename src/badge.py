@@ -12,6 +12,8 @@ class BadgeSystem():
 
     @classmethod
     def normalize_config(cls, config: dict):
+        if not config:
+            return {}
         # normalize condition
         origin_condition = config['condition']
         condition = {}
@@ -156,7 +158,7 @@ class BadgeSystem():
             # check all condition are true
             is_fufilled = True
             for key in condition:
-                if condition[key](user_badge_data[key]):
+                if condition[key](user_badge_data.get(key, 0)):
                     is_fufilled = True
                 else:
                     is_fufilled = False

@@ -157,7 +157,7 @@ pk失败了，在对面牛子的阴影笼罩下，你的牛子减小了0.3厘米
 ## Botoy
 
 ```bash
-  pip -r requirements.txt
+  pip install -r requirements.txt
 ```
 
 botoy 插件入口文件 `__init__.py` ，配置如下：

@@ -1,4 +1,4 @@
-from .db import DB, lazy_init_database
+from .db import DB, DB_UserInfo, lazy_init_database
 from .impl import get_at_segment, send_message
 from .utils import create_match_func_factory, join, ArrowUtil, fixed_two_decimal_digits
 from .config import Config
@@ -962,7 +962,8 @@ class Chinchin_friends:
             message_arr = ["他不是你的牛友，又开始了是吧。"]
             return send_message(qq, group, join(message_arr, "\n"))
         # 删除朋友
-        nickname = friends_data.get("latest_speech_nickname")
+        user = DB_UserInfo.get_user_info(at_qq)
+        nickname = user.get("latest_speech_nickname")
         if not nickname:
             nickname = "无名英雄"
         message_arr = [
